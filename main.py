@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sympy import symbols, sympify
+from sympy import symbols, sympify, diff, lambdify
 
 
 def user_function(vetor_da_variaveis):
@@ -12,16 +12,43 @@ def user_function(vetor_da_variaveis):
 
 
 def newton_modificado(v0, epsilon, user_function):
-    x = v0
-    n = len(x)
-    B = np.eye(n)  # initial approximation of inverse Hessian
-    grad = lambda x: np.array([4 * x[0] ** 3 - 4.2 * x[0] ** 2 + x[1], x[0] + 2 * x[1]])  # gradient of three-hump camel
+    global funcao
+    x0, y0 = symbols('x y')
+
     max_iter = 1000
     num_iters = []
     x_vals = []
     y_vals = []
 
-    for i in range(max_iter):
+    # Calcula o gradiente da função
+    grad_x = diff(funcao, x).subs(x, v0[0]).subs(y, v0[1])
+    grad_y = diff(funcao, y).subs(x, v0[0]).subs(y, v0[1])
+    grad = [grad_x, grad_y]
+
+    # Calcule as derivadas parciais de segunda ordem
+    d2f_dx2 = diff(diff(funcao, x), x)
+    d2f_dy2 = diff(diff(funcao, y), y)
+    d2f_dxdy = diff(diff(funcao, x), y)
+
+    # Converta as expressões simbólicas em funções numéricas
+    d2f_dx2_func = lambdify((x, y), d2f_dx2)
+    d2f_dy2_func = lambdify((x, y), d2f_dy2)
+    d2f_dxdy_func = lambdify((x, y), d2f_dxdy)
+
+    # Calcule os valores numéricos das derivadas parciais de segunda ordem
+    d2f_dx2_val = d2f_dx2_func(v0[0], v0[1])
+    d2f_dy2_val = d2f_dy2_func(v0[0], v0[1])
+    d2f_dxdy_val = d2f_dxdy_func(v0[0], v0[1])
+
+    # Crie a matriz Hessiana
+    hessiana = np.array([[d2f_dx2_val, d2f_dxdy_val], [d2f_dxdy_val, d2f_dy2_val]], dtype=np.float64)
+
+    # Calcule a inversa da Hessiana
+    hessiana_inversa = np.linalg.inv(hessiana)
+
+    dk = np.dot(hessiana_inversa, grad)
+
+    """for i in range(max_iter):
         g = grad(x)
         if np.linalg.norm(g) < epsilon:
             break  # stopping criterion for the gradient
@@ -44,9 +71,9 @@ def newton_modificado(v0, epsilon, user_function):
             break  # stopping criterion for the variables
         num_iters.append(i + 1)
         x_vals.append(x[0])
-        y_vals.append(x[1])
+        y_vals.append(x[1])"""
 
-    return x, user_function(x), i
+    return x, user_function(x), 1
 
 
 # Define os símbolos das variáveis independentes
